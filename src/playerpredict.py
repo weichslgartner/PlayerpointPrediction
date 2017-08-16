@@ -3,7 +3,9 @@ import numpy as np
 from sklearn import linear_model
 from sklearn.metrics import mean_squared_error
 from sklearn.model_selection import train_test_split
+from sklearn.model_selection import cross_val_predict
 from sklearn.svm import SVR
+from sklearn.metrics import accuracy_score
 import pandas as pd
 
 kicker_data_raw = pd.read_csv('../data/player_list.csv', delimiter=";",decimal=",")
@@ -33,12 +35,18 @@ X = pd.concat([kicker_data_clean.loc[:, 'Verein_Augsburg':'Pos_TOR'] ,kicker_dat
 print(X.dtypes )
 
 
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=0)
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.4, random_state=0)
 #est = linear_model.SGDRegressor()
 
 
 est = SVR(kernel='rbf', C=1e3, gamma=0.1)
 est = est.fit(X_train, y_train)
 y_pred = est.predict(X_test)
-print("MSE %f" % mean_squared_error(y_test, y_pred))
-print( pd.concat( [kicker_data_raw.iloc[y_test.index.values]['Name'],kicker_data_raw.iloc[y_test.index.values]['PI_2017'],pd.DataFrame(index = y_test.index, data =y_pred, dtype=np.float64)], axis=1))
+print("MSE (60/40 test split) %f" % mean_squared_error(y_test, y_pred))
+print( pd.concat( [kicker_data_raw.iloc[y_test.index.values]['Name'],kicker_data_raw.iloc[y_test.index.values]['PI_2016'],kicker_data_raw.iloc[y_test.index.values]['PI_2017'],pd.DataFrame(index = y_test.index, data =y_pred, dtype=np.float64, columns=[ "Pred. PI_2017"])], axis=1))
+
+predicted_cross_val = cross_val_predict(est, X, y, cv=10)
+print("MSE cross validation %f" % mean_squared_error(y, predicted_cross_val))
+print(predicted_cross_val)
+
+print( pd.concat( [kicker_data_clean['Name'],kicker_data_clean['PI_2016'],kicker_data_clean['PI_2017'],pd.DataFrame(index = kicker_data_clean.index,data =predicted_cross_val, dtype=np.float64, columns=[ "Pred. PI_2017"])], axis=1))
